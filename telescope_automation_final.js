@@ -443,6 +443,7 @@ Console.PrintLine("Dome is now unparked and slaved.");
 trkOn();
 Console.PrintLine("Tracking is turned on.");
 biasCollection();
+nauticalTwilight();
 
 function main() {
     var writeDir = "13112020"
