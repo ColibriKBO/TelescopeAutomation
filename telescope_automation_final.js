@@ -220,13 +220,18 @@ function getRADEC()
 
 function gotoRADec(ra, dec)
 {
+    Console.Printline(Telescope.tracking);
+    Console.Printline(arguments[1]);
     if (Telescope.tracking)
     {
+        //Console.Printline(ra, dec);
         Console.PrintLine(Telescope.Slewing);
 
+        Console.Printline("Slewing to declination " + arguments[1]);
         Telescope.SlewToCoordinates(ra, dec);
+        Console.Printline("Telescope slewing works");
         Util.WaitForMilliseconds(100);
-
+        Console.Printline("Telescope slewed");
         Console.PrintLine(Telescope.Slewing);
 
         while (Telescope.Slewing)
@@ -265,7 +270,7 @@ function biasCollection() {
     var tid;
 
     Console.PrintLine("Starting bias frame collection...");
-    tid = Util.ShellExec("ColibriGrab.exe", "-n 50 -p Bias_25ms -e 25 -t 0 -f dark -w D:\\11132020\\Bias");
+    tid = Util.ShellExec("ColibriGrab.exe", "-n 50 -p Bias_25ms -e 25 -t 0 -f dark -w D:\\01082021\\Bias");
     Console.printline(tid)
 
     while (Util.IsTaskActive(tid)) {
@@ -398,14 +403,24 @@ function nauticalTwilight() {
             }
     }
     */
-    var n = Date.now() / (1000 * 60 * 60 * 24) - 366 * 8 - 365 * 22; // days from J2000.0
+    Console.Printline("starting nautical twilight");
+    //Console.Printline(Util.SysUTCDate);
+    var n = (Util.SysUTCDate)/ (1000 * 60 * 60 * 24) - 366 * 8 - 365 * 22; // days from J2000.0
+    //Console.Printline(n);
     var L = (280.461 + 0.9856474 * n) % 360; // mean longitude mod 360
+    //Console.Printline(L);
     var g = (357.528 + 0.9856003 * n) % 360; // mean anomaly mod 360
+    //Console.Printline(g);
     var lambda = L + 1.915 * Math.sin(g * Math.PI / 180) + 0.020 * Math.sin(2 * g * Math.PI / 180); //ecliptic longitude of the sun
+    //Console.Printline(lambda);
     var epsilon = 23.439 - 0.0000004 * n; //obliquity of the ecliptic plane
+    //Console.Printline(epsilon);
     var Y = Math.cos(epsilon * Math.PI / 180) * Math.sin(lambda * Math.PI / 180);
+    //Console.Printline(Y);
     var X = Math.cos(lambda * Math.PI / 180);
+    //Console.Printline(X);
     var a = Math.atan(Y / X);
+    //Console.Printline(a);
     var RA;
     if (X < 0) {
         RA = (a*180/Math.PI) + 180;
@@ -414,39 +429,100 @@ function nauticalTwilight() {
     } else {
         RA = a * 180 / Math.PI;
     }
+    //Console.Printline(RA);
     var Dec = Math.asin(Math.sin(epsilon * Math.PI / 180) * Math.sin(lambda * Math.PI / 180))*180/Math.PI;
-    Console.Printline(RA, Dec);
+    //Console.Printline(RA);
+    //Console.Printline(Dec);
     
-    ctSun = Util.NewCTHereAndNow
+    //Console.Printline("ctSun is defined");
+    ctSun = Util.NewCThereAndNow();
+    //Console.Printline("ctSun is defined");
     ctSun.RightAscension = RA / 15
     ctSun.Declination = Dec
     elevationSun = ctSun.Elevation
+    Console.Printline(elevationSun);
     if (elevationSun > -12.0) {
         trkOff();
         closeDome();
         Dome.Park();
         Telescope.Park();
-        Util.AbortScript();
+        nauticalTwilight();
+        //Util.AbortScript();
     } else {
         main();
     }
     
 }
+
+function nauticalTwilight_start() {
+    Console.Printline("starting nautical twilight check 1");
+    //Console.Printline(Util.SysUTCDate);
+    var n = (Util.SysUTCDate)/ (1000 * 60 * 60 * 24) - 366 * 8 - 365 * 22; // days from J2000.0
+    //Console.Printline(n);
+    var L = (280.461 + 0.9856474 * n) % 360; // mean longitude mod 360
+    //Console.Printline(L);
+    var g = (357.528 + 0.9856003 * n) % 360; // mean anomaly mod 360
+    //Console.Printline(g);
+    var lambda = L + 1.915 * Math.sin(g * Math.PI / 180) + 0.020 * Math.sin(2 * g * Math.PI / 180); //ecliptic longitude of the sun
+    //Console.Printline(lambda);
+    var epsilon = 23.439 - 0.0000004 * n; //obliquity of the ecliptic plane
+    //Console.Printline(epsilon);   
+    var Y = Math.cos(epsilon * Math.PI / 180) * Math.sin(lambda * Math.PI / 180);
+    //Console.Printline(Y);
+    var X = Math.cos(lambda * Math.PI / 180);
+    //Console.Printline(X);
+    var a = Math.atan(Y / X);
+    //Console.Printline(a);
+    var RA;
+    if (X < 0) {
+        RA = (a*180/Math.PI) + 180;
+    } else if (Y < 0 && X > 0) {
+        RA = (a*180/Math.PI) + 360;
+    } else {
+        RA = a * 180 / Math.PI;
+    }
+    //Console.Printline(RA);
+    var Dec = Math.asin(Math.sin(epsilon * Math.PI / 180) * Math.sin(lambda * Math.PI / 180))*180/Math.PI;
+    //Console.Printline(RA);
+    //Console.Printline(Dec);
     
+    //Console.Printline("ctSun is defined");
+    ctSun = Util.NewCThereAndNow();
+    //Console.Printline("ctSun is defined");
+    ctSun.RightAscension = RA / 15
+    ctSun.Declination = Dec
+    elevationSun = ctSun.Elevation
+    Console.Printline(elevationSun);
+    if (elevationSun > -12.0) {
+        Console.Printline("The sun is higher than -12 degrees.")
+        trkOff();
+        closeDome();
+        Dome.Park();
+        Telescope.Park();
+        nauticalTwilight_start();
+        //Util.AbortScript();
+    } else {
+        Console.Printline("Sun below horizon. Going ahead with script.")
+    }
+}
+  
 
+//gotoRADec()
+var timeDuration = 1.0; //mins - min time of observing and time interval before checking the code again
 
-var timeDuration = 60.0; //mins - min time of observing and time interval before checking the code again
+//nauticalTwilight_start();    
 openDome();
 homeDome();
 Dome.UnparkHome();
 Console.PrintLine("Dome is now unparked and slaved.");
 trkOn();
 Console.PrintLine("Tracking is turned on.");
-biasCollection();
-nauticalTwilight();
+//biasCollection();
+
+//nauticalTwilight();
 
 function main() {
-    var writeDir = "13112020"
+    var writeDir = "01082021"
 
     var field1 = [273.735, -18.638]; // June/July
     var field2 = [103.263, 24.329]; // January
@@ -505,6 +581,12 @@ function main() {
     ct11 = Util.NewCThereAndNow()
     ct11.RightAscension = field11[0] / 15;
     ct11.Declination = parseFloat(field11[1]);
+
+    Console.Printline("Checking slew to coordinates function");
+    Telescope.SlewToCoordinates(ct8.RightAscension, ct8.Declination);
+    Console.Printline("Slew to coordinates successful");
+    gotoRADec(ct8.RightAscension, ct8.Declination);
+    Console.Printline("gotoRADec works");
 
     // array of elevations, fields, and labels for all the fields for recognition purposes
     elevations = [
@@ -611,6 +693,8 @@ function main() {
 
     Console.PrintLine("Target is at an elevation of " + ct.Elevation.toFixed(4) + " degrees.");
     Console.PrintLine("Going to " + field[2]);
+    Console.Printline(ct.RightAscension);
+    Console.Printline(ct.Declination);
     gotoRADec(ct.RightAscension, ct.Declination);
     Console.PrintLine("At target.");
     ct = Util.NewCThereAndNow()
@@ -626,12 +710,12 @@ function main() {
 
     }
     else { Console.PrintLine("Already on the right side of the pier"); }
-
-    while(Math.abs(Dome.Azimuth - ct.Azimuth) > 10) {
+/*
+    while(Math.abs(Dome.Azimuth - ct.Azimuth) > 20.0) {
         Util.WaitForMilliseconds(2000);
         Console.Printline("Waiting for dome slit to reach telescope position.");
     }
-
+*/
 
     var loop_start = Util.SysUTCDate;
     while (Util.SysUTCDate - loop_start < timeDuration*60*1000) {
@@ -649,7 +733,7 @@ function main() {
 
         // tid = Util.ShellExec("C:\\Users\\RedBird\\VS-Projects\\ColibriGrab\\Debug\\ColibriGrab.exe", "-n " + numexps.toString() + " -p " + "RA" + ct.RightAscension.toString() + "-DEC" + ct.Declination.toString() + "_25ms -e 25 -t 0 -f normal -w D:\\" + writeDir);
 
-        tid = Util.ShellExec("ColibriGrab.exe", "-n " + numexps.toString() + " -p Field1_25ms -e 25 -t 5 -f normal -w D:\\11132020");
+        tid = Util.ShellExec("ColibriGrab.exe", "-n " + numexps.toString() + " -p Field1_25ms -e 25 -t 5 -f normal -w D:\\01082021");
 
 
         while (Util.IsTaskActive(tid)) {
@@ -664,6 +748,7 @@ function main() {
         //frameCollection();
         Util.WaitForMilliseconds(1000);
     }
+    //Console.Printline("Main round done.");
     //Console.Printline(Util.SysUTCDate - loop_start);
     //Console.Printline(Util.SysUTCDate - loop_start < timeDuration*60*1000 - 0.5*60*1000); 
     
