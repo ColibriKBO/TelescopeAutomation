@@ -221,25 +221,29 @@ function getRADEC()
 function gotoRADec(ra, dec)
 {
     Console.Printline(Telescope.tracking);
-    Console.Printline(arguments[1]);
+    Console.Printline("RA in gotoRADec function " + ra.toFixed(4));
+    Console.Printline("Dec in gotoRADec function " + dec);
+    Console.Printline("Elevation of field " + ct.Elevation.toFixed(4));
     if (Telescope.tracking)
     {
         //Console.Printline(ra, dec);
         Console.PrintLine(Telescope.Slewing);
 
-        Console.Printline("Slewing to declination " + arguments[1]);
+        Console.Printline("Slewing to declination " + dec + "and right ascension " + ra.toFixed(4));
+        //Telescope.SlewToCoordinates(8.658, 19.474);
         Telescope.SlewToCoordinates(ra, dec);
-        Console.Printline("Telescope slewing works");
-        Util.WaitForMilliseconds(100);
-        Console.Printline("Telescope slewed");
-        Console.PrintLine(Telescope.Slewing);
-
-        while (Telescope.Slewing)
+         while (Telescope.Slewing)
         {
             Console.PrintLine("Going to...");
             Util.WaitForMilliseconds(500);
         }
         Console.PrintLine("Done.");
+        //Console.Printline("Telescope slewing works");
+        Util.WaitForMilliseconds(100);
+        Console.Printline("Telescope slewed");
+        Console.PrintLine(Telescope.Slewing);
+
+       
 
     }
 }
@@ -440,15 +444,39 @@ function nauticalTwilight() {
     ctSun.RightAscension = RA / 15
     ctSun.Declination = Dec
     elevationSun = ctSun.Elevation
-    Console.Printline(elevationSun);
+    Console.Printline("Sun is at an elevation of " + elevationSun.toFixed(4));
+    
     if (elevationSun > -12.0) {
+        //var n = 0;
         trkOff();
         closeDome();
         Dome.Park();
         Telescope.Park();
+        Util.WaitFor(timeDuration/(60*24));
         nauticalTwilight();
         //Util.AbortScript();
     } else {
+    /*
+        if (n >= 1){
+            main();
+        }
+        else {
+            n++
+            openDome();
+            homeDome();
+            Dome.UnparkHome();
+            Console.PrintLine("Dome is now unparked and slaved.");
+            trkOn();
+            Telescope.Unpark();
+            main();
+        }
+      */
+        openDome();
+        homeDome();
+        Dome.UnparkHome();
+        Console.PrintLine("Dome is now unparked and slaved.");
+        trkOn();
+        Telescope.Unpark();
         main();
     }
     
@@ -492,13 +520,15 @@ function nauticalTwilight_start() {
     ctSun.RightAscension = RA / 15
     ctSun.Declination = Dec
     elevationSun = ctSun.Elevation
-    Console.Printline(elevationSun);
+    Console.Printline("Sun is at an elevation of " + elevationSun.toFixed(4));
     if (elevationSun > -12.0) {
         Console.Printline("The sun is higher than -12 degrees.")
         trkOff();
         closeDome();
         Dome.Park();
         Telescope.Park();
+        //var sun_check_start = Util.SysUTCDate;
+        Util.WaitFor(timeDuration/(60*24));
         nauticalTwilight_start();
         //Util.AbortScript();
     } else {
@@ -510,14 +540,15 @@ function nauticalTwilight_start() {
 //gotoRADec()
 var timeDuration = 1.0; //mins - min time of observing and time interval before checking the code again
 
-//nauticalTwilight_start();    
+nauticalTwilight_start();    
 openDome();
 homeDome();
 Dome.UnparkHome();
 Console.PrintLine("Dome is now unparked and slaved.");
 trkOn();
+Telescope.Unpark();
 Console.PrintLine("Tracking is turned on.");
-//biasCollection();
+biasCollection();
 
 //nauticalTwilight();
 
@@ -582,11 +613,16 @@ function main() {
     ct11.RightAscension = field11[0] / 15;
     ct11.Declination = parseFloat(field11[1]);
 
+    /*
     Console.Printline("Checking slew to coordinates function");
-    Telescope.SlewToCoordinates(ct8.RightAscension, ct8.Declination);
+    Console.Printline("Field 9 RA " + ct9.RightAscension);
+    Console.Printline("Field 9 Dec " + ct9.Declination);
+    Console.Printline("Field 9 Elevation " + ct9.Elevation);
+    Telescope.SlewToCoordinates(ct9.RightAscension, ct9.Declination);
     Console.Printline("Slew to coordinates successful");
-    gotoRADec(ct8.RightAscension, ct8.Declination);
+    gotoRADec(ct9.RightAscension, ct9.Declination);
     Console.Printline("gotoRADec works");
+    */
 
     // array of elevations, fields, and labels for all the fields for recognition purposes
     elevations = [
@@ -602,6 +638,7 @@ function main() {
         [ct10.Elevation, ct10.Azimuth, field10, "field 10"],
         [ct11.Elevation, ct11.Azimuth, field11, "field 11"]
     ];
+    //Console.Printline(ct8.Elevation);
 
     //console.Printline(elevations);
     //console.printline(ct1.azimuth);
@@ -622,7 +659,8 @@ function main() {
     }
     */
     // find all fields that are above the elevation limit of 10 at that time in the night and all fields more than 10 degrees away from the Moon
-    
+
+    Console.Printline("Removing fields below the horizon and not going to rise up in the night");
     for (i = 0; i < elevations.length; i++) {
         if ((elevations[i - k][0] < elevationLimit) && (elevations[i - k][1] > azimuthLimit)) {
             //Console.Printline(elevations[i-k][1]);
@@ -633,12 +671,12 @@ function main() {
             
         } else {
             elevations = elevations;
-            //Console.Printline(elevations[i][2]);
+            //Console.Printline(elevations[i][3]);
             
         }
-        //Console.Printline("The field above the elevation limit of " + (elevationLimit.toString()) + " is " + elevations[i][3]);
         
     }
+    //Console.Printline("The highest ranked field above the elevation limit of " + (elevationLimit.toString()) + " is " + elevations[0][3]);
     //Console.Printline("Hi");
     //make sure that only fields above elevation and more than 10 degrees 
    // var r;
@@ -665,7 +703,7 @@ function main() {
 
     // check the remaining fields to make sure they have a min of timeDuration hours of viewing time
     // this part of the code also changes the field to a higher ranked field if it becomes visible in the night
-
+    Console.Printline("Choosing the highest ranked field that will be visible for " + timeDuration + " minutes");
     var n = 0; 
     do {
         var field = elevations[n];
@@ -675,7 +713,7 @@ function main() {
         //console.Printline(field[3]);
         var lat = ct.Latitude;
         //console.printline(lat);
-        var ST = ct.SiderealTime;
+        var ST = ct.SiderealTime;   
         //console.printline(ST);
         var HA = ST - ct.RightAscension;
         //Console.Printline(HA);
@@ -688,18 +726,18 @@ function main() {
         //Console.Printline(Alt < elevationLimit || Math.abs(HA_limit - HA) < timeDuration/60.0);
         //console.PrintLine(ct.RightAscension, ct.Declination);
     } while (Alt < elevationLimit || Math.abs(HA_limit - HA) < timeDuration/60.0); // RA values - 15 degrees = 60 mins, 0.25 degrees = 1 min
-    Console.Printline("The field chosen is " + field[3])
+    Console.Printline("The field chosen is " + field[3] + " with an elevation of " + ct.Elevation.toFixed(4) + " degrees");
 
 
     Console.PrintLine("Target is at an elevation of " + ct.Elevation.toFixed(4) + " degrees.");
-    Console.PrintLine("Going to " + field[2]);
-    Console.Printline(ct.RightAscension);
-    Console.Printline(ct.Declination);
+    Console.PrintLine("Going to " + field[3] + ". RA = " + ct.RightAscension.toFixed(4) + " Dec = " + ct.Declination + " Elevation = " + ct.Elevation.toFixed(4));
+    //Console.Printline(ct.RightAscension);
+    //Console.Printline(ct.Declination);
     gotoRADec(ct.RightAscension, ct.Declination);
     Console.PrintLine("At target.");
-    ct = Util.NewCThereAndNow()
-    ct.RightAscension = field[2][0] / 15;
-    ct.Declination = parseFloat(field[2][1]);
+    //ct = Util.NewCThereAndNow()
+    //ct.RightAscension = field[2][0] / 15;
+    //ct.Declination = parseFloat(field[2][1]);
 
 
     Console.PrintLine("Target Alt/Az is: Alt. =" + ct.Elevation.toFixed(2) + "   Az.= " + ct.Azimuth.toFixed(2));
@@ -716,7 +754,7 @@ function main() {
         Console.Printline("Waiting for dome slit to reach telescope position.");
     }
 */
-
+    Console.Printline("Starting frame collection")
     var loop_start = Util.SysUTCDate;
     while (Util.SysUTCDate - loop_start < timeDuration*60*1000) {
         //Console.Printline(Util.SysUTCDate - loop_start);
@@ -748,12 +786,27 @@ function main() {
         //frameCollection();
         Util.WaitForMilliseconds(1000);
     }
+    Console.Printline("Frame collection ended.")
+    
     //Console.Printline("Main round done.");
     //Console.Printline(Util.SysUTCDate - loop_start);
     //Console.Printline(Util.SysUTCDate - loop_start < timeDuration*60*1000 - 0.5*60*1000); 
     
     nauticalTwilight();
-
+/*
+    trkOff();
+    closeDome();
+    Dome.Park();
+    Telescope.Park();
+    openDome();
+    homeDome();
+    Dome.UnparkHome();
+    Console.PrintLine("Dome is now unparked and slaved.");
+    trkOn();
+    Console.PrintLine("Tracking is turned on.");
+    Telescope.Unpark();
+    main();
+*/  
 }
 //console.printline(Weather.Available && Weather.Safe);
 
