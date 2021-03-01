@@ -274,7 +274,7 @@ function biasCollection() {
     var tid;
 
     Console.PrintLine("Starting bias frame collection...");
-    tid = Util.ShellExec("ColibriGrab.exe", "-n 50 -p Bias_25ms -e 25 -t 0 -f dark -w D:\\01082021\\Bias");
+    tid = Util.ShellExec("ColibriGrab.exe", "-n 50 -p Bias_25ms -e 25 -t 0 -f dark -w D:\\ColibriData\\09022021\\Bias");
     Console.printline(tid)
 
     while (Util.IsTaskActive(tid)) {
@@ -287,16 +287,17 @@ function biasCollection() {
     Console.PrintLine("Finished bias frames...");
 }
 
-/*
+
 var fs = require('fs');
 var data = fs.readFileSync('C:/Users/GreenBird/Desktop/weather-current_demo.txt', 'utf8');
+/*
 var env_arr = (data.split("\t"));
-console.log(env_arr);
+Console.Printline(env_arr);
 
 var RA_Moon = env_arr[23];
 var Dec_Moon = env_arr[24];
 var Moon_offset = 10.0
-Console.Printline(RA_Moon, Dec_Moon);
+//Console.Printline(RA_Moon, Dec_Moon);
 */
 /*
 function weatherCheck() {
@@ -447,7 +448,7 @@ function nauticalTwilight() {
     Console.Printline("Sun is at an elevation of " + elevationSun.toFixed(4));
     
     if (elevationSun > -12.0) {
-        //var n = 0;
+        count = 0;
         trkOff();
         closeDome();
         Dome.Park();
@@ -455,13 +456,15 @@ function nauticalTwilight() {
         Util.WaitFor(timeDuration/(60*24));
         nauticalTwilight();
         //Util.AbortScript();
-    } else {
-    /*
-        if (n >= 1){
+    } else {   
+
+        if (count >= 1){
+            //Console.Printline(count.toString());
             main();
         }
         else {
-            n++
+            count++
+            //Console.Printline(count.toString());
             openDome();
             homeDome();
             Dome.UnparkHome();
@@ -470,7 +473,7 @@ function nauticalTwilight() {
             Telescope.Unpark();
             main();
         }
-      */
+    /*  
         openDome();
         homeDome();
         Dome.UnparkHome();
@@ -478,6 +481,7 @@ function nauticalTwilight() {
         trkOn();
         Telescope.Unpark();
         main();
+    */
     }
     
 }
@@ -539,7 +543,8 @@ function nauticalTwilight_start() {
 
 //gotoRADec()
 var timeDuration = 1.0; //mins - min time of observing and time interval before checking the code again
-
+//process.wait()
+var count = 0;
 nauticalTwilight_start();    
 openDome();
 homeDome();
@@ -547,13 +552,15 @@ Dome.UnparkHome();
 Console.PrintLine("Dome is now unparked and slaved.");
 trkOn();
 Telescope.Unpark();
+//Telescope.Unpark;
 Console.PrintLine("Tracking is turned on.");
 biasCollection();
 
 //nauticalTwilight();
 
 function main() {
-    var writeDir = "01082021"
+    var writeDir = "09022021"
+    Console.Printline("Time check 1: " + Util.SysUTCDate + Util.SysUTCOffset);
 
     var field1 = [273.735, -18.638]; // June/July
     var field2 = [103.263, 24.329]; // January
@@ -676,6 +683,7 @@ function main() {
         }
         
     }
+    Console.Printline("Fields above horizon and rising selected. Time check 2 " + Util.SysUTCDate + Util.SysUTCOffset);
     //Console.Printline("The highest ranked field above the elevation limit of " + (elevationLimit.toString()) + " is " + elevations[0][3]);
     //Console.Printline("Hi");
     //make sure that only fields above elevation and more than 10 degrees 
@@ -727,7 +735,7 @@ function main() {
         //console.PrintLine(ct.RightAscension, ct.Declination);
     } while (Alt < elevationLimit || Math.abs(HA_limit - HA) < timeDuration/60.0); // RA values - 15 degrees = 60 mins, 0.25 degrees = 1 min
     Console.Printline("The field chosen is " + field[3] + " with an elevation of " + ct.Elevation.toFixed(4) + " degrees");
-
+    Console.Printline("Time check: "+ Util.SysUTCDate + Util.SysUTCOffset);
 
     Console.PrintLine("Target is at an elevation of " + ct.Elevation.toFixed(4) + " degrees.");
     Console.PrintLine("Going to " + field[3] + ". RA = " + ct.RightAscension.toFixed(4) + " Dec = " + ct.Declination + " Elevation = " + ct.Elevation.toFixed(4));
@@ -753,7 +761,8 @@ function main() {
         Util.WaitForMilliseconds(2000);
         Console.Printline("Waiting for dome slit to reach telescope position.");
     }
-*/
+*/  
+    Console.Printline("Time check 3: " + Util.SysUTCDate + Util.SysUTCOffset);
     Console.Printline("Starting frame collection")
     var loop_start = Util.SysUTCDate;
     while (Util.SysUTCDate - loop_start < timeDuration*60*1000) {
@@ -771,7 +780,7 @@ function main() {
 
         // tid = Util.ShellExec("C:\\Users\\RedBird\\VS-Projects\\ColibriGrab\\Debug\\ColibriGrab.exe", "-n " + numexps.toString() + " -p " + "RA" + ct.RightAscension.toString() + "-DEC" + ct.Declination.toString() + "_25ms -e 25 -t 0 -f normal -w D:\\" + writeDir);
 
-        tid = Util.ShellExec("ColibriGrab.exe", "-n " + numexps.toString() + " -p Field1_25ms -e 25 -t 5 -f normal -w D:\\01082021");
+        tid = Util.ShellExec("ColibriGrab.exe", "-n " + numexps.toString() + " -p Field1_25ms -e 25 -t 5 -f normal -w D:\\ColibriData\\09022021");
 
 
         while (Util.IsTaskActive(tid)) {
@@ -785,12 +794,14 @@ function main() {
         //console.PrintLine(field)
         //frameCollection();
         Util.WaitForMilliseconds(1000);
+        Console.Printline("Time check 4: " + Util.SysUTCDate + Util.SysUTCOffset);
     }
     Console.Printline("Frame collection ended.")
     
     //Console.Printline("Main round done.");
     //Console.Printline(Util.SysUTCDate - loop_start);
     //Console.Printline(Util.SysUTCDate - loop_start < timeDuration*60*1000 - 0.5*60*1000); 
+    Console.Printline("Time check 5: " + Util.SysUTCDate + Util.SysUTCOffset);
     
     nauticalTwilight();
 /*
