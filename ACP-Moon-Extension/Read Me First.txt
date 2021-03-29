@@ -1,0 +1,15 @@
+ACP Moon target extension
+25-Jun-2013 (Bob Denny)
+
+The UserActionsMoon.wsc in this package includes the additional logic to add "Moon" as a special target for the Moonstation system. The logic here will survive updates and upgrades to ACP without needing to patch anything into ACP's standard scripts, etc. If you already have a UserActions in use, you'll have to merge this code into yours.
+
+To specify the Moon as a target in an ACP observing plan, use the simple "tab delimited" target format and set the RA and Dec to 0. The additional logic will replace the coordinates with the real ones at run time. For example:
+
+#interval 10
+#filter Luminance
+#binning 2
+Moon	0	0
+
+     ^      ^
+     |------|---- These are tabs not spaces
+

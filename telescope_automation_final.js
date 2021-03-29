@@ -1,6 +1,13 @@
 
 var SUP;
 
+String.prototype.trim = function()
+{
+    return this.replace(/(^\s*)|(\s*$)/g, "");
+}
+
+var curTarget = null;
+
 // Function to turn tracking off. Liberated from BJD scripts.
 function trkOff()
 {
@@ -274,7 +281,7 @@ function biasCollection() {
     var tid;
 
     Console.PrintLine("Starting bias frame collection...");
-    tid = Util.ShellExec("ColibriGrab.exe", "-n 50 -p Bias_25ms -e 25 -t 0 -f dark -w D:\\ColibriData\\09022021\\Bias");
+    tid = Util.ShellExec("ColibriGrab.exe", "-n 50 -p Bias_25ms -e 25 -t 0 -f dark -w D:\\ColibriData\\29032021\\Bias");
     Console.printline(tid)
 
     while (Util.IsTaskActive(tid)) {
@@ -287,10 +294,9 @@ function biasCollection() {
     Console.PrintLine("Finished bias frames...");
 }
 
-
+/*
 var fs = require('fs');
 var data = fs.readFileSync('C:/Users/GreenBird/Desktop/weather-current_demo.txt', 'utf8');
-/*
 var env_arr = (data.split("\t"));
 Console.Printline(env_arr);
 
@@ -542,7 +548,7 @@ function nauticalTwilight_start() {
   
 
 //gotoRADec()
-var timeDuration = 1.0; //mins - min time of observing and time interval before checking the code again
+var timeDuration = 30.0; //mins - min time of observing and time interval before checking the code again
 //process.wait()
 var count = 0;
 nauticalTwilight_start();    
@@ -552,6 +558,7 @@ Dome.UnparkHome();
 Console.PrintLine("Dome is now unparked and slaved.");
 trkOn();
 Telescope.Unpark();
+Console.Printline(Telescope.AtPark);
 //Telescope.Unpark;
 Console.PrintLine("Tracking is turned on.");
 biasCollection();
@@ -559,7 +566,7 @@ biasCollection();
 //nauticalTwilight();
 
 function main() {
-    var writeDir = "09022021"
+    var writeDir = "29032021"
     Console.Printline("Time check 1: " + Util.SysUTCDate + Util.SysUTCOffset);
 
     var field1 = [273.735, -18.638]; // June/July
@@ -632,7 +639,7 @@ function main() {
     */
 
     // array of elevations, fields, and labels for all the fields for recognition purposes
-    elevations = [
+    fieldInfo = [
         [ct1.Elevation, ct1.Azimuth, field1, "field 1"],
         [ct2.Elevation, ct2.Azimuth, field2, "field 2"],
         [ct3.Elevation, ct3.Azimuth, field3, "field 3"],
@@ -645,6 +652,8 @@ function main() {
         [ct10.Elevation, ct10.Azimuth, field10, "field 10"],
         [ct11.Elevation, ct11.Azimuth, field11, "field 11"]
     ];
+    Console.Printline(fieldInfo);
+    //Console.Printline("elevations test:" + elevations[1][2][0])
     //Console.Printline(ct8.Elevation);
 
     //console.Printline(elevations);
@@ -654,53 +663,84 @@ function main() {
     var i;
     var k = 0;
     var m;
-    // make a list of angular distance offset of all fields from the moon. these values are in degrees. 
-    //var ang_moon = [];
-    //var ang_dist_moon = [];
-    /*
-    for (m = 0; m < elevations.length; m++) {
-        ang_moon.push([Math.sin(Dec_moon*Math.PI/180) * Math.sin(elevations[m][1][1] * Math.PI / 180) + Math.cos(Dec_moon*Math.PI/180) * Math.cos(elevations[m][1][1] * Math.PI / 180) * Math.cos((RA_moon - elevations[m][1][0]) * Math.PI / 180)]);
-        //console.log(ang_moon);
-        ang_dist_moon.push(Math.acos(ang_moon[m])*180/Math.PI);
-        //console.log(ang_dist_moon);
+    // finding moon elevation and azimuth
+    Util.Console.PrintLine("== Moon Coordinates ==");
+    var SH = new ActiveXObject("WScript.Shell");
+    var BS = SH.Exec(ACPApp.Path + "\\aa.exe -moon");
+    var coords = "";
+    while(BS.Status != 1)
+    {
+        while(!BS.StdOut.AtEndOfStream)
+        {
+            coords += BS.StdOut.Read(1);
+        }
+        Util.WaitForMilliseconds(100);
     }
-    */
+    coords = coords.trim();
+
+    Util.Console.PrintLine("== " + coords + " ==");
+
+    var bits = coords.split(" ");
+
+    var SUP = Util.Script.SUP;
+    Util.Console.PrintLine(bits[1]);
+    Util.Console.PrintLine(bits[0]);
+
+    ct = Util.NewCThereAndNow();
+
+    ct.RightAscension = bits[0];
+    ct.Declination = bits[1];
+
+    Util.Console.PrintLine(ct.Elevation);
+    Util.Console.PrintLine(ct.Azimuth);
+    // make a list of angular distance offset of all fields from the moon. these values are in degrees.
+    var moon_offset = 10.0 
+    var ang_moon = [];
+    var ang_dist_moon = [];
+    
+    for (m = 0; m < fieldInfo.length; m++) {
+        ang_moon.push([Math.cos(Math.PI/2 - bits[1]*Math.PI/180) * Math.cos(Math.PI/2 - fieldInfo[m][2][1] * Math.PI / 180) + Math.sin(Math.PI/2 - bits[1]*Math.PI/180) * Math.sin(Math.PI/2 - fieldInfo[m][2][1] * Math.PI / 180) * Math.cos((bits[0]*15 - fieldInfo[m][2][0]) * Math.PI / 180)]);
+        //Console.Printline(ang_moon);
+        ang_dist_moon.push([Math.acos(ang_moon[m])*180/Math.PI]);
+        //ang_dist_moon.push()
+    }
+    Console.Printline("Angular distance for each field " + ang_dist_moon);
+    
     // find all fields that are above the elevation limit of 10 at that time in the night and all fields more than 10 degrees away from the Moon
 
     Console.Printline("Removing fields below the horizon and not going to rise up in the night");
-    for (i = 0; i < elevations.length; i++) {
-        if ((elevations[i - k][0] < elevationLimit) && (elevations[i - k][1] > azimuthLimit)) {
+    for (i = 0; i < fieldInfo.length; i++) {
+        if ((fieldInfo[i - k][0] < elevationLimit) && (fieldInfo[i - k][1] > azimuthLimit)) {
             //Console.Printline(elevations[i-k][1]);
-            //Console.Printline(elevations[i - k][0] < elevationLimit && elevations[i - k][1] > azimuthLimit);
-            elevations.splice(i - k, 1);
+            Console.Printline(fieldInfo[i - k][0] < elevationLimit && fieldInfo[i - k][1] > azimuthLimit);
+            fieldInfo.splice(i - k, 1);
+            ang_dist_moon.splice(i - k, 1);
             k = k + 1;      
             
             
-        } else {
-            elevations = elevations;
-            //Console.Printline(elevations[i][3]);
-            
-        }
-        
+        } 
     }
     Console.Printline("Fields above horizon and rising selected. Time check 2 " + Util.SysUTCDate + Util.SysUTCOffset);
     //Console.Printline("The highest ranked field above the elevation limit of " + (elevationLimit.toString()) + " is " + elevations[0][3]);
     //Console.Printline("Hi");
+    Console.Printline(fieldInfo);
+    Console.Printline(ang_dist_moon);
     //make sure that only fields above elevation and more than 10 degrees 
-   // var r;
-    //var a = 0;
-    /*
+    
+    var r;
+    var a = 0;
+    
     for (r = 0; r < ang_dist_moon.length; r++) {
-        if (ang_dist_moon[r - a] < Moon_offset) {
-            elevations.splice(r - a, 1);
-            a = a + 1
-        } else {
-            elevations = elevations;   
-        }
-        Console.PrintLine("The field visible after accounting for moon offset is " + elevations[r][2]);
+        //Console.Printline(ang_dist_moon[r]);
+        if (ang_dist_moon[r][0] < moon_offset) {
+            fieldInfo.splice(r - a, 1);
+            a = a + 1;
+            //Console.Printline("After splicing: " + fieldInfo[r-a][3]);
+          
+        } 
     }
-    */
-   //Console.Printline(elevations)
+    
+    //Console.Printline(fieldInfo);
     //Console.Printline("Alt < 10 && ct.RightAscension < 0.25 * timeDuration")
 
     // latitude and sidereal time of telescope's position
@@ -714,11 +754,11 @@ function main() {
     Console.Printline("Choosing the highest ranked field that will be visible for " + timeDuration + " minutes");
     var n = 0; 
     do {
-        var field = elevations[n];
+        var field = fieldInfo[n];
         ct = Util.NewCTHereAndNow();
         ct.RightAscension = field[2][0] / 15;
         ct.Declination = parseFloat(field[2][1]);
-        //console.Printline(field[3]);
+        Console.Printline(field[3]);
         var lat = ct.Latitude;
         //console.printline(lat);
         var ST = ct.SiderealTime;   
@@ -780,7 +820,7 @@ function main() {
 
         // tid = Util.ShellExec("C:\\Users\\RedBird\\VS-Projects\\ColibriGrab\\Debug\\ColibriGrab.exe", "-n " + numexps.toString() + " -p " + "RA" + ct.RightAscension.toString() + "-DEC" + ct.Declination.toString() + "_25ms -e 25 -t 0 -f normal -w D:\\" + writeDir);
 
-        tid = Util.ShellExec("ColibriGrab.exe", "-n " + numexps.toString() + " -p Field1_25ms -e 25 -t 5 -f normal -w D:\\ColibriData\\09022021");
+        tid = Util.ShellExec("ColibriGrab.exe", "-n " + numexps.toString() + " -p Field1_25ms -e 25 -t 5 -f normal -w D:\\ColibriData\\29032021");
 
 
         while (Util.IsTaskActive(tid)) {

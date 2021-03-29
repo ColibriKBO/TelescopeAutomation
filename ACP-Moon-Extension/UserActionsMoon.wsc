@@ -1,0 +1,354 @@
+<?xml version="1.0" ?>
+<package>
+	<comment>
+<![CDATA[
+tabs=4
+-----------------------------------------------------------------------------------------
+
+ACP Custom User Actions Component Framework (JScript Version)
+===========================================
+
+Script:         UserActionsJS.wsc
+Author:         Robert B. Denny <rdenny@dc3.com>
+Version:        5.1
+Requires:       ACP 5.0 or later
+                Windows Script 5.6 or later (installed by ACP setup)
+
+Environment:    This is a Windows Script Component. Once registered (see below) it
+                provides ACP standard scripts with a set of user-written actions that 
+                can be performed at several points during the execution of ACP's
+                standard scripts.  If you don't have a copy of PrimalScript, I STRONGLY
+                suggest you get it and use it to work with this WSC, and ACP scripting
+                in general!
+                
+                http://sapien.com/software/primalscript
+                
+Activating:     Normally, ACP does not "see" this component and it's member functions. 
+                To activate it for ACP it must be registered with the Windows OS. This
+                is simple on 32-bit systems: Right click on UserActions.wsc and select
+                Register. If you see a success popup, it's ready to go. If you see a 
+                failure popup, there is a mistake in the code or XML.
+                
+                On 64-bit systems it's a bit more complicated, as UserActions must be
+                registered with the 32-bit subsystem of Windows:
+                
+                    1. Run C:\Windows\SysWOW64\cmd.exe                 <--- Yes, SysWOW64!
+                    2. ...> CD "\Program Files (x86)\ACP Obs Control"  <-- Note quotes
+                    3. ...> regsvr32 UserActions.wsc
+                
+Usage:          Add your custom script actions to the empty methods below. Access to
+                ACP's "Util" object is automatically included. 
+                
+                To write to the ACP console, call Util.Console.PrintLine(). 
+                
+                To control the telescope and camera, you MUST use Util.ScriptTelescope 
+                and Util.ScriptCamera. DO NOT CREATE INSTANCES OF ACP.TELESCOPE, 
+                MAXIM.CCDCAMERA, OR ACP.CAMERA! This will prevent access locks from 
+                working properly.
+                
+                You have access to all global variables in the host ACP script via 
+                the Util.Script property. DO NOT CHANGE GLOBALS IN THE HOST SCRIPT,
+                as it may cause it to fail.
+                
+                You have access to all of the facilities in AcquireSupport.wsc. To
+                call any of its methods or access any of its properties, use 
+                Util.Script.SUP to access the script's global variable that holds the
+                object reference to the support library.
+                
+PLEASE NOTE:    ACP has a built-in facility for running custom scripts at the time it
+                it is started up and shutdown. See the ACP helpfile, "Customizing the
+                Program" for more info on startup and shutdown scripts.
+
+Edit History:
+    23-Nov-06   5.0 Initial edit, after VBScript version of UserActions.wsc 5.0
+    17-Jun-07   5.1 TargetStart can now skip targets, see context comments.
+    07-Nov-11   No logic change, GEM:732 add notation on registering including for 64 bit
+                Remove old startup/shutdown notation.
+    11-Mar-13   CUSTOMIZED FOR ASTELCO MOONSTATION - PARK ONLY. ASSUMES SCOPE WILL NOT 
+                MOVE AFTER PARKED.
+-----------------------------------------------------------------------------------------
+]]>
+	</comment>
+	<component id="UserActions">
+		<?component error="false" debug="false" ?>
+		<registration progid="ACP.UserActions" classid="{33F9198D-112D-4AB9-8951-F5D7FB5E79AA}" description="ACP custom user action methods" remotable="no" version="1.0">
+		</registration>
+		<public>
+			<method name="ImageComplete">
+				<parameter name="ImageFile"/>
+			</method>
+			<method name="ImageEnd">
+				<parameter name="ImageFile"/>
+			</method>
+			<method name="ImageStart">
+				<parameter name="Interval"/>
+				<parameter name="Binning"/>
+				<parameter name="Subframe"/>
+				<parameter name="FilterNum"/>
+				<parameter name="ForPointing"/>
+			</method>
+			<method name="ScriptEnd">
+			</method>
+			<method name="ScriptStart">
+			</method>
+			<method name="Shutdown">
+			</method>
+			<method name="SlewEnd">
+			</method>
+			<method name="SlewStart">
+				<parameter name="RightAscension"/>
+				<parameter name="Declination"/>
+			</method>
+			<method name="TargetStart">
+				<parameter name="Plan"/>
+				<parameter name="Target"/>
+				<parameter name="NextTarget"/>
+			</method>
+			<method name="TargetEnd">
+				<parameter name="Plan"/>
+				<parameter name="Target"/>
+				<parameter name="NextTarget"/>
+			</method>
+		</public>
+		<object id="FSO" progid="Scripting.FileSystemObject" events="false" reference="false"/>
+		<object id="ACPApp" progid="ACP.Application" events="false" reference="true"/>
+		<object id="Util" progid="ACP.Util" events="false" reference="false"/>
+		<script id="UserActions" language="JScript">
+<![CDATA[
+//
+// Globals (state info)
+//
+var curTarget = null;
+
+//
+// Enhance String with a trim() method
+//
+String.prototype.trim = function()
+{
+    return this.replace(/(^\s*)|(\s*$)/g, "");
+};
+
+
+//------------------------------------------------------------------------------
+// ScriptStart()     Called at start of script execution
+//
+// Parameters:
+//   None:
+//
+// Return True to continue ACP script, False to stop ACP script
+//------------------------------------------------------------------------------
+function ScriptStart()
+{
+    return true;
+}
+
+
+//------------------------------------------------------------------------------
+// ScriptEnd()       Called at the end of script execution
+//
+// Parameters:
+//   None
+//
+// No return. THIS WILL NOT BE CALLED ON A SCRIPT ERROR
+//------------------------------------------------------------------------------
+function ScriptEnd()
+{
+    // -- Changed by Bob Denny --
+    curTarget = null;               // Vital to prevent object leaks!
+    // --------------------------
+    return;
+}
+
+
+//------------------------------------------------------------------------------
+// SlewStart()       Called prior To starting a slew
+//
+// Parameters:
+//   RightAscension:     J2000 right ascension of slew destination
+//   Declination:        J2000 declination of slew destination
+//
+// Return True to permit the slew. False will prevent the slew and cause the 
+// script to stop with an error.
+//------------------------------------------------------------------------------
+function SlewStart(RightAscension, Declination)
+{
+    if(curTarget.Name.toLowerCase() == "moon")
+    {
+        Util.Console.PrintLine("== TARGET IS MOON - CALCULATE CURRENT COORDINATES ==");
+        var SH = new ActiveXObject("WScript.Shell");
+        var BS = SH.Exec(ACPApp.Path + "\\aa.exe -moon");
+        var coords = "";
+        while(BS.Status != 1)
+        {
+            while(!BS.StdOut.AtEndOfStream) {
+                coords += BS.StdOut.Read(1);
+            }
+            Util.WaitForMilliseconds(100);
+        }
+        coords = coords.trim();
+        Util.Console.PrintLine("== " + coords + " ==");
+        var bits = coords.split(" ");
+        // aa.exe makes local topocentric, convert to J2000.
+        var SUP = Util.Script.SUP;
+        SUP.LocalTopocentricToJ2000(parseFloat(bits[0]), parseFloat(bits[1]));
+        Util.Console.PrintLine("RAloc = " + Util.Hours_HMS(parseFloat(bits[0])));
+        Util.Console.PrintLine("DEloc = " + Util.Degrees_DMS(parseFloat(bits[1])));    
+        curTarget.RA = SUP.J2000RA;
+        curTarget.Dec = SUP.J2000Dec;
+        Util.Console.PrintLine("RAj2k = " + Util.Hours_HMS(curTarget.RA));
+        Util.Console.PrintLine("DEj2k = " + Util.Degrees_DMS(curTarget.Dec));    
+    }
+    return true;
+}
+
+
+//------------------------------------------------------------------------------
+// SlewEnd()         Called when a slew has ended
+//
+// Parameters:
+//   None
+//
+// Return True to permit the script to continue. Returning False will cause the 
+// script to stop with an error.
+//------------------------------------------------------------------------------
+function SlewEnd()
+{
+    return true;
+}
+
+
+//------------------------------------------------------------------------------
+// ImageStart()      Called just before image acquisition
+//
+// Parameters:
+//   Interval:       Exposure interval (sec, neg=dark)           (read/write)
+//   Binning:        Binning level                               (read/write)
+//   Subframe:       Subframe size (fractional)                  (read/write)
+//   FilterNum:      Filter number                               (DO NOT CHANGE!!!!!)
+//   ForPointing     True if this is pointing exp.               (DO NOT CHANGE!!!!!)
+//
+// Return True to permit the script to continue. Returning False will cause the 
+// script to stop with an error.
+//------------------------------------------------------------------------------
+function ImageStart(Interval, Binning, Subframe, FilterNum, ForPointing)
+{
+    return true;
+}
+
+
+//------------------------------------------------------------------------------
+// ImageEnd()        Called when image acquisition has ended
+//
+// Parameters:
+//   ImageFile:      Full path/name to image file
+//
+// Return True to permit the script to continue. Returning False will cause the 
+// script to stop with an error.
+//
+// NOTE: DO NOT RENAME OR MOVE THE FILE HERE IF YOU ARE USING THIS WITH
+//       ACQUIREIMAGES. USE #IMAGECOMPLETE (BELOW), WHICH RUNS AFTER
+//       ACQUIREIMAGES IS COMPLETELY FINISHED WITH THE IMAGE FILE (EXCEPT
+//       For AUTOSTACKING. SEE NOTE BELOW!)
+//------------------------------------------------------------------------------
+function ImageEnd(ImageFile)
+{
+    return true;
+}
+
+
+//------------------------------------------------------------------------------
+// Shutdown()        Called by AcquireSupport when its Shutdown method is called
+//
+// Parameters:
+//   None
+//
+// Return True if you handle observatory shutdown here. If you return False,
+// AcquireSupport will run its built-in parking and camera warmup code.
+//------------------------------------------------------------------------------
+function Shutdown()
+{
+    return false;                                   // SKIP built-in shutdown logic
+}
+
+
+//------------------------------------------------------------------------------
+// ImageComplete()   Called From AcquireImages.js/~plan-acquire.js when image 
+//                   acquisition and processing are complete
+//
+// Parameters:
+//   ImageFile:      Full path/name to image file                (read/write)
+//
+// Return True to permit the script to continue. Returning False will cause the 
+// script to stop with an error. At this point, the image processing is done
+// so you may change the image file name.
+//
+// WARNINGS: 
+//   (1) DO NOT CHANGE FILE EXTENSION! IT MUST BE .FTS.
+//   (2) IF YOU CHANGE THE FILE NAME, AUTO_STACK WILL BE DISABLED
+//------------------------------------------------------------------------------
+function ImageComplete(ImageFile)
+{
+    return true;
+}
+
+
+//------------------------------------------------------------------------------
+// TargetStart() Called from AcquireImages.js/~plan-acquire.js when a new
+//               target is about to start. Also called from AcquireScheduler.vbs
+//               for ACP Scheduler runs. 
+//
+// Parameters (ACP):
+//   Plan            ACP.Plan object for currently running plan
+//   Target          ACP.Target object for target about to be started
+//   NextTarget      ACP.Target object for next target, or null
+//
+// Parameters (Scheduler):
+//   Plan            Scheduler Plan object for currently running plan
+//   Target          Scheduler Observation object for target about to be started
+//   NextTarget      null
+//
+// Use Util.Script.xxx to access AcquireImages/AcquireScheduler globals, etc.
+//
+// Return true to permit the target to be acquired by ACP, false will terminate
+// the observing run. Return 2 to cause the target to be skipped.
+//------------------------------------------------------------------------------
+function TargetStart(Plan, Target, NextTarget)
+{
+    // -- Changed by Bob Denny --
+    curTarget = Target;             // Save current target for possible Moon
+    SlewStart(0, 0);
+    // --------------------------
+    return true;
+}
+
+
+//------------------------------------------------------------------------------
+// TargetEnd() Called from AcquireImages.js/~plan-acquire.js when the current
+//             target's processing is complete.
+//
+// Parameters(ACP):
+//   Plan            ACP.Plan object for currently running plan
+//   Target          ACP.Target object for target just completed
+//   NextTarget      ACP.Target object for next target, or null
+//
+// Parameters (Scheduler):
+//   Plan            Scheduler Plan object for currently running plan
+//   Target          Scheduler Observation object for target about to be started
+//   NextTarget      null
+//
+// Use Util.Script.xxx to access AcquireImages/AcquireScheduler globals, etc.
+//
+// Return frue to permit the script to continue. Returning false will cause the 
+// observing run to terminate.
+//------------------------------------------------------------------------------
+function TargetEnd(Plan, Target, NextTarget)
+{
+    // -- Changed by Bob Denny --
+    curTarget = null;               // Vital to prevent object leaks!
+    // --------------------------
+    return true;
+}
+]]>
+		</script>
+	</component>
+</package>
