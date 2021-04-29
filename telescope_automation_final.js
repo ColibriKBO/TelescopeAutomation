@@ -295,17 +295,6 @@ function biasCollection() {
 }
 
 /*
-var fs = require('fs');
-var data = fs.readFileSync('C:/Users/GreenBird/Desktop/weather-current_demo.txt', 'utf8');
-var env_arr = (data.split("\t"));
-Console.Printline(env_arr);
-
-var RA_Moon = env_arr[23];
-var Dec_Moon = env_arr[24];
-var Moon_offset = 10.0
-//Console.Printline(RA_Moon, Dec_Moon);
-*/
-/*
 function weatherCheck() {
     var bool = Weather.Available;
     var safe = Weather.Safe;
@@ -363,13 +352,6 @@ function weatherCheck() {
     }
 }
 */
-//ct = Util.NewCTHereAndNow()
-//var SunCalc = new SunCalc.SunCalc();
-//var sunpos = SunCalc.getPosition(, 43.5, 80.5);
-//console.log(sunpos.altitude);
-
-//var moonpos = SunCalc.getMoonPosition(new Date(), ct.Latitude , 80.5);
-//console.log(moonpos.altitude);
 
 
 function nauticalTwilight() {
@@ -440,14 +422,11 @@ function nauticalTwilight() {
     } else {
         RA = a * 180 / Math.PI;
     }
-    //Console.Printline(RA);
-    var Dec = Math.asin(Math.sin(epsilon * Math.PI / 180) * Math.sin(lambda * Math.PI / 180))*180/Math.PI;
-    //Console.Printline(RA);
-    //Console.Printline(Dec);
     
-    //Console.Printline("ctSun is defined");
+    var Dec = Math.asin(Math.sin(epsilon * Math.PI / 180) * Math.sin(lambda * Math.PI / 180))*180/Math.PI;
+   
     ctSun = Util.NewCThereAndNow();
-    //Console.Printline("ctSun is defined");
+    
     ctSun.RightAscension = RA / 15
     ctSun.Declination = Dec
     elevationSun = ctSun.Elevation
@@ -465,12 +444,12 @@ function nauticalTwilight() {
     } else {   
 
         if (count >= 1){
-            //Console.Printline(count.toString());
+            
             main();
         }
         else {
             count++
-            //Console.Printline(count.toString());
+            
             openDome();
             homeDome();
             Dome.UnparkHome();
@@ -494,23 +473,23 @@ function nauticalTwilight() {
 
 function nauticalTwilight_start() {
     Console.Printline("starting nautical twilight check 1");
-    //Console.Printline(Util.SysUTCDate);
+    
     var n = (Util.SysUTCDate)/ (1000 * 60 * 60 * 24) - 366 * 8 - 365 * 22; // days from J2000.0
-    //Console.Printline(n);
+   
     var L = (280.461 + 0.9856474 * n) % 360; // mean longitude mod 360
-    //Console.Printline(L);
+    
     var g = (357.528 + 0.9856003 * n) % 360; // mean anomaly mod 360
-    //Console.Printline(g);
+    
     var lambda = L + 1.915 * Math.sin(g * Math.PI / 180) + 0.020 * Math.sin(2 * g * Math.PI / 180); //ecliptic longitude of the sun
-    //Console.Printline(lambda);
+   
     var epsilon = 23.439 - 0.0000004 * n; //obliquity of the ecliptic plane
-    //Console.Printline(epsilon);   
+      
     var Y = Math.cos(epsilon * Math.PI / 180) * Math.sin(lambda * Math.PI / 180);
-    //Console.Printline(Y);
+    
     var X = Math.cos(lambda * Math.PI / 180);
-    //Console.Printline(X);
+    
     var a = Math.atan(Y / X);
-    //Console.Printline(a);
+   
     var RA;
     if (X < 0) {
         RA = (a*180/Math.PI) + 180;
@@ -519,14 +498,11 @@ function nauticalTwilight_start() {
     } else {
         RA = a * 180 / Math.PI;
     }
-    //Console.Printline(RA);
-    var Dec = Math.asin(Math.sin(epsilon * Math.PI / 180) * Math.sin(lambda * Math.PI / 180))*180/Math.PI;
-    //Console.Printline(RA);
-    //Console.Printline(Dec);
     
-    //Console.Printline("ctSun is defined");
+    var Dec = Math.asin(Math.sin(epsilon * Math.PI / 180) * Math.sin(lambda * Math.PI / 180))*180/Math.PI;
+    
     ctSun = Util.NewCThereAndNow();
-    //Console.Printline("ctSun is defined");
+    
     ctSun.RightAscension = RA / 15
     ctSun.Declination = Dec
     elevationSun = ctSun.Elevation
@@ -537,7 +513,7 @@ function nauticalTwilight_start() {
         closeDome();
         Dome.Park();
         Telescope.Park();
-        //var sun_check_start = Util.SysUTCDate;
+        Console.Printline("Waiting for " + timeDuration + " minutes to run sun check again.")
         Util.WaitFor(timeDuration/(60*24));
         nauticalTwilight_start();
         //Util.AbortScript();
@@ -547,9 +523,9 @@ function nauticalTwilight_start() {
 }
   
 
-//gotoRADec()
+
 var timeDuration = 30.0; //mins - min time of observing and time interval before checking the code again
-//process.wait()
+
 var count = 0;
 nauticalTwilight_start();    
 openDome();
@@ -559,7 +535,6 @@ Console.PrintLine("Dome is now unparked and slaved.");
 trkOn();
 Telescope.Unpark();
 Console.Printline(Telescope.AtPark);
-//Telescope.Unpark;
 Console.PrintLine("Tracking is turned on.");
 biasCollection();
 
@@ -627,37 +602,23 @@ function main() {
     ct11.RightAscension = field11[0] / 15;
     ct11.Declination = parseFloat(field11[1]);
 
-    /*
-    Console.Printline("Checking slew to coordinates function");
-    Console.Printline("Field 9 RA " + ct9.RightAscension);
-    Console.Printline("Field 9 Dec " + ct9.Declination);
-    Console.Printline("Field 9 Elevation " + ct9.Elevation);
-    Telescope.SlewToCoordinates(ct9.RightAscension, ct9.Declination);
-    Console.Printline("Slew to coordinates successful");
-    gotoRADec(ct9.RightAscension, ct9.Declination);
-    Console.Printline("gotoRADec works");
-    */
-
+  
     // array of elevations, fields, and labels for all the fields for recognition purposes
     fieldInfo = [
-        [ct1.Elevation, ct1.Azimuth, field1, "field 1"],
-        [ct2.Elevation, ct2.Azimuth, field2, "field 2"],
-        [ct3.Elevation, ct3.Azimuth, field3, "field 3"],
-        [ct4.Elevation, ct4.Azimuth, field4, "field 4"],
-        [ct5.Elevation, ct5.Azimuth, field5, "field 5"],
-        [ct6.Elevation, ct6.Azimuth, field6, "field 6"],
-        [ct7.Elevation, ct7.Azimuth, field7, "field 7"],
-        [ct8.Elevation, ct8.Azimuth, field8, "field 8"],
-        [ct9.Elevation, ct9.Azimuth, field9, "field 9"],
-        [ct10.Elevation, ct10.Azimuth, field10, "field 10"],
-        [ct11.Elevation, ct11.Azimuth, field11, "field 11"]
+        [ct1.Elevation, ct1.Azimuth, field1, "field1"],
+        [ct2.Elevation, ct2.Azimuth, field2, "field2"],
+        [ct3.Elevation, ct3.Azimuth, field3, "field3"],
+        [ct4.Elevation, ct4.Azimuth, field4, "field4"],
+        [ct5.Elevation, ct5.Azimuth, field5, "field5"],
+        [ct6.Elevation, ct6.Azimuth, field6, "field6"],
+        [ct7.Elevation, ct7.Azimuth, field7, "field7"],
+        [ct8.Elevation, ct8.Azimuth, field8, "field8"],
+        [ct9.Elevation, ct9.Azimuth, field9, "field9"],
+        [ct10.Elevation, ct10.Azimuth, field10, "field10"],
+        [ct11.Elevation, ct11.Azimuth, field11, "field11"]
     ];
     Console.Printline(fieldInfo);
-    //Console.Printline("elevations test:" + elevations[1][2][0])
-    //Console.Printline(ct8.Elevation);
-
-    //console.Printline(elevations);
-    //console.printline(ct1.azimuth);
+    
     var elevationLimit = 10.0;
     var azimuthLimit = 180.0;
     var i;
@@ -700,9 +661,9 @@ function main() {
     
     for (m = 0; m < fieldInfo.length; m++) {
         ang_moon.push([Math.cos(Math.PI/2 - bits[1]*Math.PI/180) * Math.cos(Math.PI/2 - fieldInfo[m][2][1] * Math.PI / 180) + Math.sin(Math.PI/2 - bits[1]*Math.PI/180) * Math.sin(Math.PI/2 - fieldInfo[m][2][1] * Math.PI / 180) * Math.cos((bits[0]*15 - fieldInfo[m][2][0]) * Math.PI / 180)]);
-        //Console.Printline(ang_moon);
+        
         ang_dist_moon.push([Math.acos(ang_moon[m])*180/Math.PI]);
-        //ang_dist_moon.push()
+     
     }
     Console.Printline("Angular distance for each field " + ang_dist_moon);
     
@@ -711,7 +672,7 @@ function main() {
     Console.Printline("Removing fields below the horizon and not going to rise up in the night");
     for (i = 0; i < fieldInfo.length; i++) {
         if ((fieldInfo[i - k][0] < elevationLimit) && (fieldInfo[i - k][1] > azimuthLimit)) {
-            //Console.Printline(elevations[i-k][1]);
+            
             Console.Printline(fieldInfo[i - k][0] < elevationLimit && fieldInfo[i - k][1] > azimuthLimit);
             fieldInfo.splice(i - k, 1);
             ang_dist_moon.splice(i - k, 1);
@@ -722,7 +683,7 @@ function main() {
     }
     Console.Printline("Fields above horizon and rising selected. Time check 2 " + Util.SysUTCDate + Util.SysUTCOffset);
     //Console.Printline("The highest ranked field above the elevation limit of " + (elevationLimit.toString()) + " is " + elevations[0][3]);
-    //Console.Printline("Hi");
+  
     Console.Printline(fieldInfo);
     Console.Printline(ang_dist_moon);
     //make sure that only fields above elevation and more than 10 degrees 
@@ -731,7 +692,7 @@ function main() {
     var a = 0;
     
     for (r = 0; r < ang_dist_moon.length; r++) {
-        //Console.Printline(ang_dist_moon[r]);
+        
         if (ang_dist_moon[r][0] < moon_offset) {
             fieldInfo.splice(r - a, 1);
             a = a + 1;
@@ -740,13 +701,7 @@ function main() {
         } 
     }
     
-    //Console.Printline(fieldInfo);
-    //Console.Printline("Alt < 10 && ct.RightAscension < 0.25 * timeDuration")
-
-    // latitude and sidereal time of telescope's position
-   // var lat = CoordinateTransform.Latitude;
-   // Console.PrintLine(lat);
-   // var ST = CoordinateTransform.SiderealTime;
+    
     
 
     // check the remaining fields to make sure they have a min of timeDuration hours of viewing time
@@ -760,32 +715,27 @@ function main() {
         ct.Declination = parseFloat(field[2][1]);
         Console.Printline(field[3]);
         var lat = ct.Latitude;
-        //console.printline(lat);
+       
         var ST = ct.SiderealTime;   
-        //console.printline(ST);
+        
         var HA = ST - ct.RightAscension;
-        //Console.Printline(HA);
+        
         var Alt = Math.asin(Math.sin(ct.Declination*Math.PI/180) * Math.sin(lat*Math.PI/180) + Math.cos(ct.Declination*Math.PI/180) * Math.cos(lat*Math.PI/180) * Math.cos(HA*15*Math.PI/180))*180/Math.PI;
         n += 1;
-        //console.PrintLine(Alt);
+        
         var HA_limit = Math.acos((Math.sin(elevationLimit*Math.PI/180) - Math.sin(ct.Declination*Math.PI/180)*Math.sin(lat*Math.PI/180))/(Math.cos(ct.Declination*Math.PI/180)*Math.cos(lat*Math.PI/180)))*(180/Math.PI)/15;
-        //Console.Printline(HA_limit);
-        //Console.Printline(Math.abs(HA_limit-HA));
-        //Console.Printline(Alt < elevationLimit || Math.abs(HA_limit - HA) < timeDuration/60.0);
-        //console.PrintLine(ct.RightAscension, ct.Declination);
+        
     } while (Alt < elevationLimit || Math.abs(HA_limit - HA) < timeDuration/60.0); // RA values - 15 degrees = 60 mins, 0.25 degrees = 1 min
     Console.Printline("The field chosen is " + field[3] + " with an elevation of " + ct.Elevation.toFixed(4) + " degrees");
     Console.Printline("Time check: "+ Util.SysUTCDate + Util.SysUTCOffset);
 
     Console.PrintLine("Target is at an elevation of " + ct.Elevation.toFixed(4) + " degrees.");
     Console.PrintLine("Going to " + field[3] + ". RA = " + ct.RightAscension.toFixed(4) + " Dec = " + ct.Declination + " Elevation = " + ct.Elevation.toFixed(4));
-    //Console.Printline(ct.RightAscension);
-    //Console.Printline(ct.Declination);
+    
     gotoRADec(ct.RightAscension, ct.Declination);
     Console.PrintLine("At target.");
     //ct = Util.NewCThereAndNow()
-    //ct.RightAscension = field[2][0] / 15;
-    //ct.Declination = parseFloat(field[2][1]);
+    
 
 
     Console.PrintLine("Target Alt/Az is: Alt. =" + ct.Elevation.toFixed(2) + "   Az.= " + ct.Azimuth.toFixed(2));
@@ -806,11 +756,11 @@ function main() {
     Console.Printline("Starting frame collection")
     var loop_start = Util.SysUTCDate;
     while (Util.SysUTCDate - loop_start < timeDuration*60*1000) {
-        //Console.Printline(Util.SysUTCDate - loop_start);
+        
         Util.WaitForMilliseconds(500);
        
 
-        //Console.Printline("Hi");
+        
 
         var i, numruns, numexps;
 
@@ -819,8 +769,10 @@ function main() {
         
 
         // tid = Util.ShellExec("C:\\Users\\RedBird\\VS-Projects\\ColibriGrab\\Debug\\ColibriGrab.exe", "-n " + numexps.toString() + " -p " + "RA" + ct.RightAscension.toString() + "-DEC" + ct.Declination.toString() + "_25ms -e 25 -t 0 -f normal -w D:\\" + writeDir);
+        Console.Printline(field[3])
 
-        tid = Util.ShellExec("ColibriGrab.exe", "-n " + numexps.toString() + " -p Field1_25ms -e 25 -t 5 -f normal -w D:\\ColibriData\\29032021");
+        
+        tid = Util.ShellExec("ColibriGrab.exe", "-n " + numexps.toString() + " -p " + field[3] + "_25ms -e 25 -t 5 -f normal -w D:\\ColibriData\\29032021");
 
 
         while (Util.IsTaskActive(tid)) {
@@ -844,45 +796,5 @@ function main() {
     Console.Printline("Time check 5: " + Util.SysUTCDate + Util.SysUTCOffset);
     
     nauticalTwilight();
-/*
-    trkOff();
-    closeDome();
-    Dome.Park();
-    Telescope.Park();
-    openDome();
-    homeDome();
-    Dome.UnparkHome();
-    Console.PrintLine("Dome is now unparked and slaved.");
-    trkOn();
-    Console.PrintLine("Tracking is turned on.");
-    Telescope.Unpark();
-    main();
-*/  
+
 }
-//console.printline(Weather.Available && Weather.Safe);
-
-
-
-
-//main(); // run the code immediately the first time
-//Console.Printline("Main Is Done");
-//console.printline(Weather.Available);
-//Console.Printline(Weather.Safe);
-
-//Console.PrintLine(loop_start);
-//Console.Printline(Util.SysUTCDate - loop_start < timeDuration - 0.5);
-/*
-while(main == 'False') {
-    shutCode();
-    main();
-}
-
-*/
-//var runCode = setInterval(main, 1000 * 60 * timeDuration); // run the code in the time interval specified to recheck for better and new fields
-//Console.Printline(runCode);
-
-
-
-
-
-// process.wait(); //Defect to keep console open on Visual Studio
