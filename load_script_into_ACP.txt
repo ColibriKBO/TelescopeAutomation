@@ -1,0 +1,6 @@
+To load and start the telescope automation script, follow the following steps: 
+--> Open ACP 
+--> To make sure that the telescope is what ACP is connected to, go to ACP -> Preferences -> Dome Control -> Select Dome -> MaxDome II -> OK -> OK. Then, go to Telescope -> Setup -> MaxPoint -> OK. 
+--> To connect ACP to the telescope, go to Telescope -> Connect. 
+--> To load the script onto ACP, select Select the Script... -> go to file directory: C:\Users\GreenBird\Documents\GitHub\TelescopeAutomation\telescope_automation_final.js -> Open
+--> Click Run
